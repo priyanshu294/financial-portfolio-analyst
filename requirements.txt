@@ -1,0 +1,13 @@
+fastapi>=0.110.0
+uvicorn>=0.28.0
+pydantic>=2.0.0
+python-dotenv>=1.0.0
+langchain-core>=0.3.0
+langchain-groq>=0.2.0
+langsmith>=0.1.0
+tavily-python>=0.5.0
+yfinance>=0.2.40
+markdown>=3.6
+bleach>=6.1.0
+xhtml2pdf>=0.2.15
+requests>=2.31.0

@@ -1,0 +1,19 @@
+# Environment secrets (CRITICAL)
+.env
+.env.local
+.env.*.local
+
+# Python virtual environment & cache
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Generated user reports & temp logs
+reports/
+*.log
+
+# OS & IDE metadata
+.DS_Store
+.idea/
+.vscode/

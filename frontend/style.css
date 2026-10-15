@@ -1,0 +1,511 @@
+:root {
+    --bg-base: #0B0F19;
+    --surface: #111827;
+    --report-surface: #1F2937;
+    --text-primary: #F9FAFB;
+    --text-secondary: #9CA3AF;
+    --border-color: #374151;
+    --border-light: #4B5563;
+    --accent-blue: #2563EB;
+    
+    --font-ui: 'IBM Plex Sans', sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-ui);
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    line-height: 1.5;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.app-container {
+    display: flex;
+    height: 100vh;
+    width: 100%;
+}
+
+/* --- Control Panel --- */
+.control-panel {
+    width: 380px;
+    background-color: var(--surface);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    padding: 2rem;
+    overflow-y: auto;
+    box-shadow: 4px 0 15px rgba(0,0,0,0.2);
+    z-index: 10;
+}
+
+.panel-header {
+    margin-bottom: 2.5rem;
+}
+
+.panel-header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    color: var(--text-primary);
+}
+
+.subtitle {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.divider {
+    height: 1px;
+    background-color: var(--border-color);
+    margin: 2rem 0;
+}
+
+.control-form h2 {
+    font-size: 1.125rem;
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
+}
+
+label {
+    font-weight: 500;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+}
+
+input[type="text"],
+input[type="number"] {
+    font-family: var(--font-ui);
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1rem;
+    background-color: var(--report-surface);
+    color: var(--text-primary);
+    transition: all 0.2s;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.3);
+}
+
+small {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+}
+
+.slider-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+input[type="range"] {
+    flex-grow: 1;
+    accent-color: var(--accent-blue);
+}
+
+.value-display {
+    font-family: var(--font-ui);
+    font-weight: 600;
+    font-size: 0.875rem;
+    min-width: 2.5rem;
+    text-align: right;
+    color: var(--text-primary);
+}
+
+.cta-button {
+    margin-top: 1rem;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #fff;
+    border: none;
+    padding: 1rem;
+    font-family: var(--font-ui);
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s;
+    box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.4);
+}
+
+.cta-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 8px -1px rgba(37, 99, 235, 0.5);
+}
+
+.cta-button:active {
+    transform: translateY(1px);
+}
+
+.cta-button:disabled {
+    background: var(--border-color);
+    color: var(--text-secondary);
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+/* --- Output Pane --- */
+.output-pane {
+    flex-grow: 1;
+    background-color: var(--bg-base);
+    padding: 3rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.empty-state h2 {
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.hidden {
+    display: none !important;
+}
+
+#loadingState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--report-surface);
+    border: 1px solid var(--border-color);
+    padding: 3rem;
+    border-radius: 12px;
+    max-width: 900px;
+    margin: 10vh auto 0 auto;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+    text-align: center;
+}
+
+.loader {
+    width: 48px;
+    height: 48px;
+    border: 4px solid var(--border-color);
+    border-bottom-color: var(--accent-blue);
+    border-radius: 50%;
+    display: inline-block;
+    box-sizing: border-box;
+    animation: rotation 1s linear infinite;
+    margin-bottom: 1.5rem;
+}
+
+@keyframes rotation {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* --- Markdown Render Styles --- */
+.report-content {
+    background-color: var(--report-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 3rem 4rem;
+    max-width: 900px;
+    margin: 0 auto;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+    color: var(--text-primary);
+}
+
+.report-content.is-empty {
+    padding: 2rem 3rem;
+    margin-top: 10vh;
+}
+
+.report-content h1, 
+.report-content h2, 
+.report-content h3 {
+    margin-top: 2.5rem;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.report-content h1 {
+    font-size: 2rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+    margin-top: 0;
+}
+
+.report-content h2 {
+    font-size: 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
+.report-content ul {
+    margin-bottom: 1.5rem;
+    padding-left: 1.5rem;
+    color: var(--text-secondary);
+}
+
+.report-content li {
+    margin-bottom: 0.5rem;
+}
+
+.report-content p {
+    margin-bottom: 1.5rem;
+    color: var(--text-secondary);
+}
+
+/* --- Table Styling --- */
+.report-content table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 2rem 0;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.report-content th,
+.report-content td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.report-content th {
+    background-color: var(--surface);
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+}
+
+.report-content tr:last-child td {
+    border-bottom: none;
+}
+
+.report-content strong {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* --- Badges --- */
+.badge-low {
+    background-color: #D1FAE5 !important;
+    color: #065F46 !important;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    font-weight: 700;
+    font-size: 0.75rem;
+    display: inline-block;
+    text-transform: uppercase;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+.badge-mod {
+    background-color: #FEF3C7 !important;
+    color: #92400E !important;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    font-weight: 700;
+    font-size: 0.75rem;
+    display: inline-block;
+    text-transform: uppercase;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+.badge-high {
+    background-color: #FFE4E6 !important;
+    color: #9F1239 !important;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    font-weight: 700;
+    font-size: 0.75rem;
+    display: inline-block;
+    text-transform: uppercase;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+/* --- Print Styles for Native PDF Generation --- */
+@media print {
+    body {
+        background-color: #1F2937 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    
+    .control-panel, #downloadBtn {
+        display: none !important;
+    }
+    
+    .app-container {
+        display: block;
+        height: auto;
+    }
+    
+    .output-pane {
+        width: 100%;
+        height: auto;
+        overflow: visible;
+        padding: 0;
+    }
+    
+    .report-content {
+        box-shadow: none;
+        border: none;
+        padding: 1rem;
+        break-inside: auto;
+        margin: 0;
+        max-width: 100%;
+    }
+    
+    h1, h2, h3, h4, h5, h6 {
+        page-break-after: avoid;
+        break-after: avoid;
+    }
+    
+    tr, td, th, li {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+    
+    p {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+}
+
+/* --- Empty State Polish --- */
+.icon-glow-wrapper {
+    background-color: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    border-radius: 16px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.15);
+}
+
+.pulse-dot {
+    width: 10px;
+    height: 10px;
+    background-color: #10B981;
+    border-radius: 50%;
+    box-shadow: 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.preset-chips {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.preset-chip {
+    background-color: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-family: var(--font-ui);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.preset-chip:hover {
+    background-color: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #60A5FA;
+}
+
+/* --- LangSmith Production Monitoring & Feedback --- */
+.feedback-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: rgba(30, 41, 59, 0.6);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.35rem 0.75rem;
+}
+
+.feedback-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-right: 0.25rem;
+}
+
+.feedback-btn {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-secondary);
+    border-radius: 6px;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: all 0.2s ease;
+    font-family: var(--font-ui);
+}
+
+.feedback-btn:hover {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.4);
+    color: #93C5FD;
+}
+
+.feedback-btn.active-positive {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: rgba(16, 185, 129, 0.5);
+    color: #34D399;
+}
+
+.feedback-btn.active-negative {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
+    color: #F87171;
+}
+
+.feedback-status {
+    font-size: 0.75rem;
+    color: #10B981;
+    font-weight: 500;
+    margin-left: 0.25rem;
+}
