@@ -177,6 +177,30 @@ def build_pdf_report(markdown_text: str, filename: str, run_id: Optional[str] = 
         safe_markdown = safe_markdown.replace(old, new)
         
     html_content = markdown.markdown(safe_markdown, extensions=['tables'])
+
+    # Format table risk flags and recommendations into badges for PDF
+    def format_pdf_td(match):
+        inner = match.group(1).strip()
+        strong_m = re.search(r'<strong>(.*?)</strong>', inner, re.IGNORECASE)
+        if strong_m:
+            word = strong_m.group(1).upper()
+            if word in ['INVESTIGATE', 'SELL']:
+                return f'<td><span class="badge-high">{word}</span></td>'
+            elif word in ['REVIEW', 'HOLD']:
+                return f'<td><span class="badge-mod">{word}</span></td>'
+            else:
+                return f'<td><span class="badge-low">{word}</span></td>'
+
+        lower = inner.lower()
+        if any(k in lower for k in ['high valuation', 'negative momentum', 'bearish sentiment', 'high risk', 'negative']):
+            return f'<td><span class="badge-high">{inner}</span></td>'
+        elif any(k in lower for k in ['moderate', 'review', 'neutral']):
+            return f'<td><span class="badge-mod">{inner}</span></td>'
+        elif any(k in lower for k in ['low risk', 'low']):
+            return f'<td><span class="badge-low">{inner}</span></td>'
+        return match.group(0)
+
+    html_content = re.sub(r'<td>(.*?)</td>', format_pdf_td, html_content)
     
     # Configure font embedding for full unicode and rupee sign (₹)
     font_face_css = ""
@@ -210,6 +234,9 @@ def build_pdf_report(markdown_text: str, filename: str, run_id: Optional[str] = 
             th, td {{ border: 1px solid #E5E7EB; padding: 8px; text-align: left; vertical-align: top; font-family: {font_family_name}; }}
             th {{ background-color: #F3F4F6; font-weight: bold; font-size: 9pt; text-transform: uppercase; }}
             td {{ font-size: 9pt; }}
+            .badge-low {{ background-color: #D1FAE5; color: #065F46; padding: 2px 6px; font-weight: bold; font-size: 8pt; text-transform: uppercase; }}
+            .badge-mod {{ background-color: #FEF3C7; color: #92400E; padding: 2px 6px; font-weight: bold; font-size: 8pt; text-transform: uppercase; }}
+            .badge-high {{ background-color: #FFE4E6; color: #9F1239; padding: 2px 6px; font-weight: bold; font-size: 8pt; text-transform: uppercase; }}
             ul {{ margin-bottom: 15px; }}
             li {{ margin-bottom: 5px; }}
         </style>

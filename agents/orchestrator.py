@@ -52,7 +52,12 @@ Instructions:
 5. Generate executive action items (e.g., investigate, review allocation).
 6. Be highly analytical and provide rich, detailed explanations.
 7. For the latest_news_headline field, generate a short, punchy summary (max 5-8 words). NEVER output 'Error' or 'Unavailable' - if news is missing, simply output 'No major events'.
-8. For the risk_flag field, assign an explicit category: 'High Valuation', 'Negative Momentum', 'Bearish Sentiment', 'Sector Concentration', or 'Low Risk'. NEVER return 'None', null, or empty string.
+8. For each position's risk_flag field, assign strictly stock-specific risks: 'High Valuation', 'Negative Momentum', 'Bearish Sentiment', or 'Low Risk'.
+   - 'High Valuation': when P/E > {criteria.pe_ratio_threshold}.
+   - 'Negative Momentum': when 52-week momentum is negative (< -10%).
+   - 'Bearish Sentiment': when news headlines or sentiment are distinctly negative.
+   - 'Low Risk': when the position has moderate valuation, healthy/neutral momentum, and positive or neutral news.
+   CRITICAL: DO NOT assign 'Sector Concentration' as an individual position's risk_flag. Sector concentration is a portfolio-level metric that belongs strictly in Key Risks and Red Flags.
 9. Keep each position rationale concise (1-2 sentences) citing key metrics. Adhere strictly to valid JSON formatting (never escape apostrophes with \').
 
 Provide the final output strictly conforming to the requested schema.
@@ -77,9 +82,15 @@ Provide the final output strictly conforming to the requested schema.
                     if ticker_data.get("momentum_52w_percent") is not None:
                         pos.momentum_52w = float(ticker_data["momentum_52w_percent"])
                 
-                # Sanitize risk_flag so it never renders as 'None' or empty
-                if not pos.risk_flag or str(pos.risk_flag).strip().lower() in ["none", "null", ""]:
-                    pos.risk_flag = "Low Risk"
+                # Sanitize risk_flag: ensure Sector Concentration never appears at position level, and normalize invalid values
+                flag_str = str(pos.risk_flag).strip() if pos.risk_flag else ""
+                if not flag_str or flag_str.lower() in ["none", "null", "n/a", "sector concentration", "concentration", ""]:
+                    if pos.pe_ratio and pos.pe_ratio > criteria.pe_ratio_threshold:
+                        pos.risk_flag = "High Valuation"
+                    elif pos.momentum_52w is not None and pos.momentum_52w < -10.0:
+                        pos.risk_flag = "Negative Momentum"
+                    else:
+                        pos.risk_flag = "Low Risk"
             
             # Tier 3 Guardrail: Enforce regulatory compliance & audit advice language
             summary = audit_output_compliance(summary)

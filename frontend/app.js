@@ -272,12 +272,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 let badgeClass = 'badge-low';
                 let displayTxt = riskText;
 
-                if (lower === 'none' || lower === 'null' || lower === 'n/a' || lower === '') {
+                if (lower === 'none' || lower === 'null' || lower === 'n/a' || lower === '' || lower.includes('concentration')) {
                     displayTxt = 'Low Risk';
                     badgeClass = 'badge-low';
                 } else if (lower.includes('high') || lower.includes('bearish') || lower.includes('negative') || lower.includes('alert')) {
                     badgeClass = 'badge-high';
-                } else if (lower.includes('concentration') || lower.includes('momentum') || lower.includes('moderate') || lower.includes('review') || lower.includes('neutral')) {
+                } else if (lower.includes('momentum') || lower.includes('moderate') || lower.includes('review') || lower.includes('neutral')) {
                     badgeClass = 'badge-mod';
                 } else {
                     badgeClass = 'badge-low';
