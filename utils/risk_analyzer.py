@@ -12,7 +12,7 @@ class PositionAnalysis(BaseModel):
     pe_ratio: Optional[float] = Field(description="Price to Earnings ratio")
     momentum_52w: float = Field(description="52-week price momentum / return")
     latest_news_headline: str = Field(description="A short summary of the most impactful news event (max 5-8 words). Do NOT write 'Error' or 'Unavailable'. If data is missing or no news, write 'No major events'.")
-    risk_flag: Optional[str] = Field(description="Any specific risk flag triggered (e.g., High Valuation, Negative Sentiment). None if no risk.")
+    risk_flag: str = Field(default="Low Risk", description="Categorical risk flag triggered. Must be one of: 'High Valuation', 'Negative Momentum', 'Bearish Sentiment', 'Sector Concentration', or 'Low Risk'. NEVER return 'None' or empty.")
     recommendation: str = Field(description="Action recommendation: hold, review, or investigate")
     rationale: str = Field(description="Detailed explanation for the recommendation (2-3 sentences), citing specific metrics and news.")
 

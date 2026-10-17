@@ -25,7 +25,7 @@ def generate_markdown_report(summary: PortfolioSummary, watchlist: list[str]) ->
     md_content += "|---|---|---|---|---|---|---|\n"
     
     for pos in summary.positions:
-        flag = pos.risk_flag if pos.risk_flag else "None"
+        flag = pos.risk_flag if (pos.risk_flag and str(pos.risk_flag).strip().lower() not in ["none", "null", ""]) else "Low Risk"
         pe = round(pos.pe_ratio, 2) if pos.pe_ratio else "N/A"
         headline = pos.latest_news_headline.replace("|", "-") # escape markdown tables
         currency_symbol = "₹" if pos.ticker.endswith(".NS") or pos.ticker.endswith(".BO") else "$"

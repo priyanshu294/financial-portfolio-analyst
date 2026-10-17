@@ -5,7 +5,7 @@ from typing import Dict, Any, List
 from concurrent.futures import ThreadPoolExecutor
 from langsmith import traceable
 
-# Configure a shared requests session with browser headers to avoid cloud IP blocks
+# Shared requests session with browser headers
 _session = requests.Session()
 _session.headers.update({
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
@@ -13,14 +13,39 @@ _session.headers.update({
     "Accept-Language": "en-US,en;q=0.5",
 })
 
+# Browser-impersonating session using curl_cffi to bypass cloud IP / datacenter blocks
+_cffi_session = None
+_cached_crumb = None
+
+def get_yahoo_crumb():
+    global _cffi_session, _cached_crumb
+    try:
+        from curl_cffi import requests as cffi_requests
+    except ImportError:
+        return None, None
+
+    if _cffi_session is None or _cached_crumb is None:
+        try:
+            s = cffi_requests.Session(impersonate="chrome120")
+            s.get("https://fc.yahoo.com", timeout=5)
+            r = s.get("https://query2.finance.yahoo.com/v1/test/getcrumb", timeout=5)
+            if r.status_code == 200 and r.text and len(r.text) < 50:
+                _cffi_session = s
+                _cached_crumb = r.text.strip()
+        except Exception:
+            _cffi_session = None
+            _cached_crumb = None
+    return _cffi_session, _cached_crumb
+
 @traceable(name="Fetch Stock Market Data", run_type="tool")
 def fetch_market_data(ticker: str) -> Dict[str, Any]:
     """
     Fetches historical and real-time market data with multi-tier fallbacks:
     1. yfinance with browser session headers
     2. yfinance fast_info (bypasses Yahoo crumb 401s on cloud datacenters)
-    3. yfinance recent history candles
-    4. Finnhub API fallback for price, P/E, and sector
+    3. curl_cffi TLS-impersonated Yahoo quoteSummary (direct PE & sector for Indian/Global stocks)
+    4. yfinance recent history candles
+    5. Finnhub API fallback for price, P/E, and sector
     """
     clean_ticker = ticker.strip().upper()
     try:
@@ -105,7 +130,39 @@ def fetch_market_data(ticker: str) -> Dict[str, Any]:
 
         beta = info.get("beta") or 1.0
 
-        # 4. Finnhub Fallback (Crucial for Cloud Datacenters like Render where Yahoo blocks crumbs)
+        # 4. Direct curl_cffi quoteSummary Fallback (Bypasses cloud datacenter IP blocks for Indian & Global stocks)
+        if pe_ratio is None or sector == "Unknown" or not price or float(price) <= 0:
+            cs, crumb = get_yahoo_crumb()
+            if cs and crumb:
+                try:
+                    url = f"https://query2.finance.yahoo.com/v10/finance/quoteSummary/{clean_ticker}?modules=summaryDetail,defaultKeyStatistics,assetProfile,financialData&crumb={crumb}"
+                    cres = cs.get(url, timeout=5).json()
+                    cresult = cres.get("quoteSummary", {}).get("result", [{}])[0]
+                    csd = cresult.get("summaryDetail", {})
+                    cks = cresult.get("defaultKeyStatistics", {})
+                    cap = cresult.get("assetProfile", {})
+                    cfd = cresult.get("financialData", {})
+
+                    if not price or float(price) <= 0:
+                        price = cfd.get("currentPrice", {}).get("raw") or csd.get("regularMarketPrice", {}).get("raw")
+                    
+                    if pe_ratio is None:
+                        pe_ratio = csd.get("trailingPE", {}).get("raw") or csd.get("forwardPE", {}).get("raw")
+                        # If still None, compute price / trailingEps
+                        if pe_ratio is None and cks.get("trailingEps", {}).get("raw") and price:
+                            teps = float(cks["trailingEps"]["raw"])
+                            if teps > 0:
+                                pe_ratio = round(float(price) / teps, 2)
+
+                    if sector == "Unknown" and cap.get("sector"):
+                        sector = cap["sector"]
+
+                    if not market_cap and csd.get("marketCap", {}).get("raw"):
+                        market_cap = csd["marketCap"]["raw"]
+                except Exception as ce:
+                    pass
+
+        # 5. Finnhub Fallback (For US stocks or ADRs)
         finnhub_key = os.getenv("FINNHUB_API_KEY")
         if finnhub_key and (not price or float(price) <= 0 or pe_ratio is None or sector == "Unknown"):
             try:
@@ -126,7 +183,7 @@ def fetch_market_data(ticker: str) -> Dict[str, Any]:
                     if p_res.get("finnhubIndustry"):
                         sector = p_res["finnhubIndustry"]
             except Exception as fe:
-                print(f"[!] Warning: Finnhub fallback error for {clean_ticker}: {fe}")
+                pass
 
         return {
             "ticker": ticker,

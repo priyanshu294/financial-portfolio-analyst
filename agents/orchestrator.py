@@ -52,6 +52,7 @@ Instructions:
 5. Generate executive action items (e.g., investigate, review allocation).
 6. Be highly analytical and provide rich, detailed explanations.
 7. For the latest_news_headline field, generate a short, punchy summary (max 5-8 words). NEVER output 'Error' or 'Unavailable' - if news is missing, simply output 'No major events'.
+8. For the risk_flag field, assign an explicit category: 'High Valuation', 'Negative Momentum', 'Bearish Sentiment', 'Sector Concentration', or 'Low Risk'. NEVER return 'None', null, or empty string.
 
 Provide the final output strictly conforming to the requested schema.
 """
@@ -74,6 +75,10 @@ Provide the final output strictly conforming to the requested schema.
                         pos.pe_ratio = float(ticker_data["pe_ratio"])
                     if ticker_data.get("momentum_52w_percent") is not None:
                         pos.momentum_52w = float(ticker_data["momentum_52w_percent"])
+                
+                # Sanitize risk_flag so it never renders as 'None' or empty
+                if not pos.risk_flag or str(pos.risk_flag).strip().lower() in ["none", "null", ""]:
+                    pos.risk_flag = "Low Risk"
             
             # Tier 3 Guardrail: Enforce regulatory compliance & audit advice language
             summary = audit_output_compliance(summary)

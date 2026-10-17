@@ -260,5 +260,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 tag.className = 'badge-low';
             }
         });
+
+        // 3. Process Table Risk Flag (Column 6)
+        const tableRows = container.querySelectorAll('table tr');
+        tableRows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length >= 6) {
+                const riskCell = cells[5];
+                const riskText = riskCell.textContent.trim();
+                const lower = riskText.toLowerCase();
+                let badgeClass = 'badge-low';
+                let displayTxt = riskText;
+
+                if (lower === 'none' || lower === 'null' || lower === 'n/a' || lower === '') {
+                    displayTxt = 'Low Risk';
+                    badgeClass = 'badge-low';
+                } else if (lower.includes('high') || lower.includes('bearish') || lower.includes('negative') || lower.includes('alert')) {
+                    badgeClass = 'badge-high';
+                } else if (lower.includes('concentration') || lower.includes('momentum') || lower.includes('moderate') || lower.includes('review') || lower.includes('neutral')) {
+                    badgeClass = 'badge-mod';
+                } else {
+                    badgeClass = 'badge-low';
+                }
+
+                riskCell.innerHTML = `<span class="${badgeClass}">${displayTxt}</span>`;
+            }
+        });
     }
 });

@@ -11,3 +11,4 @@ markdown>=3.6
 bleach>=6.1.0
 xhtml2pdf>=0.2.15
 requests>=2.31.0
+curl_cffi>=0.7.0
