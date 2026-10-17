@@ -53,6 +53,7 @@ Instructions:
 6. Be highly analytical and provide rich, detailed explanations.
 7. For the latest_news_headline field, generate a short, punchy summary (max 5-8 words). NEVER output 'Error' or 'Unavailable' - if news is missing, simply output 'No major events'.
 8. For the risk_flag field, assign an explicit category: 'High Valuation', 'Negative Momentum', 'Bearish Sentiment', 'Sector Concentration', or 'Low Risk'. NEVER return 'None', null, or empty string.
+9. Keep each position rationale concise (1-2 sentences) citing key metrics. Adhere strictly to valid JSON formatting (never escape apostrophes with \').
 
 Provide the final output strictly conforming to the requested schema.
 """

@@ -12,5 +12,6 @@ SEC_USER_AGENT = os.getenv("SEC_USER_AGENT")
 llm = ChatGroq(
     temperature=0,
     model_name="openai/gpt-oss-120b", 
-    groq_api_key=GROQ_API_KEY
+    groq_api_key=GROQ_API_KEY,
+    max_tokens=8192
 )

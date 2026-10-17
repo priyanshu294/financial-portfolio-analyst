@@ -1,4 +1,6 @@
 import os
+import re
+import urllib.request
 import requests
 import yfinance as yf
 from typing import Dict, Any, List
@@ -12,6 +14,106 @@ _session.headers.update({
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.5",
 })
+
+# Reference sector mapping for prominent Indian (NSE/BSE) equities
+INDIAN_SECTORS = {
+    "TCS": "Technology", "INFY": "Technology", "WIPRO": "Technology", "HCLTECH": "Technology", "TECHM": "Technology", "LTIM": "Technology",
+    "RELIANCE": "Energy", "ONGC": "Energy", "BPCL": "Energy", "IOC": "Energy", "COALINDIA": "Energy",
+    "HDFCBANK": "Financial Services", "ICICIBANK": "Financial Services", "SBIN": "Financial Services", "KOTAKBANK": "Financial Services", "AXISBANK": "Financial Services", "BAJFINANCE": "Financial Services", "BAJAJFINSV": "Financial Services",
+    "TATAMOTORS": "Consumer Cyclical", "MARUTI": "Consumer Cyclical", "M&M": "Consumer Cyclical", "BAJAJ-AUTO": "Consumer Cyclical", "EICHERMOT": "Consumer Cyclical",
+    "SUNPHARMA": "Healthcare", "DRREDDY": "Healthcare", "CIPLA": "Healthcare", "DIVISLAB": "Healthcare", "APOLLOHOSP": "Healthcare",
+    "ITC": "Consumer Defensive", "HINDUNILVR": "Consumer Defensive", "NESTLEIND": "Consumer Defensive", "BRITANNIA": "Consumer Defensive", "TATACONSUM": "Consumer Defensive",
+    "TATASTEEL": "Basic Materials", "JSWSTEEL": "Basic Materials", "HINDALCO": "Basic Materials", "GRASIM": "Basic Materials",
+    "BHARTIARTL": "Communication Services",
+    "LT": "Industrials", "ADANIENT": "Industrials", "ADANIPORTS": "Industrials",
+    "NTPC": "Utilities", "POWERGRID": "Utilities", "TITAN": "Consumer Cyclical", "ASIANPAINT": "Basic Materials", "ULTRACEMCO": "Basic Materials"
+}
+
+def parse_compact_number(s: str) -> int:
+    if not s or s == "-":
+        return 0
+    s = s.replace(",", "").strip()
+    multiplier = 1
+    if s.endswith("T"):
+        multiplier = 10**12
+        s = s[:-1]
+    elif s.endswith("B"):
+        multiplier = 10**9
+        s = s[:-1]
+    elif s.endswith("M"):
+        multiplier = 10**6
+        s = s[:-1]
+    elif s.endswith("K") or s.endswith("k"):
+        multiplier = 10**3
+        s = s[:-1]
+    try:
+        return int(float(s) * multiplier)
+    except Exception:
+        return 0
+
+def fetch_google_finance_data(ticker: str) -> Dict[str, Any]:
+    """
+    Direct scraper for Google Finance key statistics (PE, EPS, Price, Market Cap).
+    Unlike Yahoo, Google Finance does NOT require cookies/crumbs and does not block
+    cloud datacenter IP addresses (Render, AWS, DigitalOcean).
+    """
+    clean = ticker.strip().upper()
+    queries = []
+    if clean.endswith(".NS"):
+        queries = [f"{clean[:-3]}:NSE"]
+    elif clean.endswith(".BO"):
+        queries = [f"{clean[:-3]}:BOM"]
+    else:
+        queries = [f"{clean}:NASDAQ", f"{clean}:NYSE"]
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9"
+    }
+
+    for q in queries:
+        try:
+            url = f"https://www.google.com/finance/quote/{q}"
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=4) as res:
+                html = res.read().decode("utf-8", errors="ignore")
+
+            if "We couldn't find any match" in html:
+                continue
+
+            stats = {}
+            for m in re.finditer(r'<div class="SwQK7">([^<]+)</div><div class="dO6ijd">([^<]+)</div>', html):
+                stats[m.group(1).strip()] = m.group(2).strip()
+
+            pe_ratio = None
+            if "P/E ratio" in stats and stats["P/E ratio"] not in ["-", ""]:
+                try:
+                    pe_ratio = float(stats["P/E ratio"].replace(",", ""))
+                except ValueError:
+                    pass
+
+            price = None
+            spans = re.findall(r'<span[^>]*>[₹\$]([\d,]+\.\d{2})</span>', html)
+            if spans:
+                try:
+                    price = float(spans[0].replace(",", ""))
+                except ValueError:
+                    pass
+
+            if pe_ratio is None and price and "EPS" in stats and stats["EPS"] not in ["-", ""]:
+                try:
+                    eps_clean = re.sub(r"[^0-9.]", "", stats["EPS"])
+                    if eps_clean and float(eps_clean) > 0:
+                        pe_ratio = round(price / float(eps_clean), 2)
+                except Exception:
+                    pass
+
+            mkt_cap = parse_compact_number(stats.get("Mkt. cap", ""))
+
+            return {"pe_ratio": pe_ratio, "price": price, "market_cap": mkt_cap, "stats": stats}
+        except Exception:
+            continue
+    return {}
 
 # Browser-impersonating session using curl_cffi to bypass cloud IP / datacenter blocks
 _cffi_session = None
@@ -182,8 +284,25 @@ def fetch_market_data(ticker: str) -> Dict[str, Any]:
                     p_res = requests.get(f"https://finnhub.io/api/v1/stock/profile2?symbol={finnhub_symbol}&token={finnhub_key}", timeout=4).json()
                     if p_res.get("finnhubIndustry"):
                         sector = p_res["finnhubIndustry"]
-            except Exception as fe:
+            except Exception:
                 pass
+
+        # 6. High-Reliability Google Finance Fallback (Guaranteed to work on cloud datacenters without crumbs/blocks)
+        if pe_ratio is None or not price or float(price) <= 0 or not market_cap:
+            gf_data = fetch_google_finance_data(clean_ticker)
+            if gf_data:
+                if pe_ratio is None and gf_data.get("pe_ratio") is not None:
+                    pe_ratio = gf_data["pe_ratio"]
+                if (not price or float(price) <= 0) and gf_data.get("price") is not None:
+                    price = gf_data["price"]
+                if not market_cap and gf_data.get("market_cap"):
+                    market_cap = gf_data["market_cap"]
+
+        # 7. Map reference sector if still Unknown
+        if sector == "Unknown":
+            raw_sym = clean_ticker.split(".")[0]
+            if raw_sym in INDIAN_SECTORS:
+                sector = INDIAN_SECTORS[raw_sym]
 
         return {
             "ticker": ticker,
